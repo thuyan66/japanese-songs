@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Laulupaja — Game Arcade</title>
+<link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#060047;--bg2:#071A52;
+  --primary:#77D970;--primary-bright:#A7FF83;--primary-deep:#17B978;
+  --magenta:#E90064;--pink:#FF5F9E;--plum:#93329E;
+  --cream:#FEFFDE;--lav:#B4AEE8;--mint:#DDFFBC;
+  --green:#A7FF83;--red:#E90064;
+  --card:#071A52;--card-border:rgba(119,217,112,.3);
+  --glass:rgba(254,255,222,.05);
+  --text:#FEFFDE;--text-dim:#B4AEE8;
+  --font-display:'Audiowide',cursive;
+  --font-body:'Chakra Petch',sans-serif;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font-body)}
+
+/* ─── Lasers ─── */
+#lasers{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.laser{position:absolute;width:2px;height:160%;background:linear-gradient(180deg,transparent,var(--primary),transparent);opacity:.12;transform-origin:top center}
+.laser:nth-child(odd){background:linear-gradient(180deg,transparent,var(--pink),transparent)}
+.laser:nth-child(1){left:12%;transform:rotate(18deg);animation:lsweep 11s ease-in-out infinite}
+.laser:nth-child(2){left:35%;transform:rotate(-14deg);animation:lsweep 14s ease-in-out infinite reverse}
+.laser:nth-child(3){left:58%;transform:rotate(22deg);animation:lsweep 9s ease-in-out infinite}
+.laser:nth-child(4){left:78%;transform:rotate(-10deg);animation:lsweep 13s ease-in-out infinite reverse}
+.laser:nth-child(5){left:92%;transform:rotate(15deg);animation:lsweep 10s ease-in-out infinite}
+@keyframes lsweep{0%,100%{transform:rotate(var(--r,15deg))}50%{transform:rotate(calc(var(--r,15deg)*-1))}}
+
+/* ─── Screens ─── */
+.screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;z-index:1;overflow-y:auto}
+.screen.active{display:flex}
+
+/* ─── Home ─── */
+#screen-home h1{font-family:var(--font-display);font-size:clamp(1.6rem,5vw,2.4rem);background:linear-gradient(135deg,var(--primary-bright),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+#screen-home .subtitle{font-size:.85rem;color:var(--text-dim);margin-bottom:28px;letter-spacing:2px;text-transform:uppercase}
+.song-badge{background:var(--glass);border:1px solid var(--card-border);border-radius:12px;padding:10px 20px;margin-bottom:32px;font-size:.9rem;color:var(--primary);letter-spacing:1px}
+.menu-btn{width:min(280px,80vw);padding:16px 24px;margin:8px 0;border:none;border-radius:14px;font-family:var(--font-body);font-size:1.05rem;font-weight:700;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.menu-btn::before{content:'';position:absolute;inset:0;border-radius:14px;padding:2px;background:linear-gradient(135deg,var(--primary),var(--magenta));-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.menu-btn{background:var(--card);color:var(--text)}
+.menu-btn:active{transform:scale(.96)}
+.menu-btn .icon{font-size:1.3rem;margin-right:8px}
+
+.back-btn{margin-top:20px;padding:10px 24px;border:1px solid var(--card-border);border-radius:10px;background:transparent;color:var(--text-dim);font-family:var(--font-body);font-size:.85rem;cursor:pointer}
+
+/* ─── HUD bar ─── */
+.hud{width:100%;max-width:500px;display:flex;justify-content:space-between;align-items:center;padding:8px 4px;font-size:.85rem;flex-shrink:0}
+.hud-item{display:flex;align-items:center;gap:6px}
+.hud-label{color:var(--text-dim);font-size:.7rem;text-transform:uppercase;letter-spacing:1px}
+.hud-val{font-family:var(--font-display);font-size:1rem;color:var(--primary)}
+
+/* ─── Timer bar ─── */
+.timer-bar-wrap{width:100%;max-width:500px;height:6px;background:rgba(254,255,222,.08);border-radius:3px;margin:6px 0 12px;flex-shrink:0;overflow:hidden}
+.timer-bar{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--primary),var(--pink));transition:width .3s linear}
+.timer-bar.danger{background:linear-gradient(90deg,var(--magenta),var(--pink))}
+
+/* ─── Arrange Cards ─── */
+.verse-label{font-family:var(--font-display);font-size:.8rem;color:var(--pink);letter-spacing:2px;margin-bottom:6px;flex-shrink:0}
+#arrange-cards{flex:1;width:100%;max-width:500px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding:8px 0;touch-action:pan-y}
+.arr-card{display:flex;align-items:center;gap:10px;padding:14px;border:1.5px solid var(--card-border);border-radius:12px;background:var(--card);transition:border-color .25s,box-shadow .25s,background .25s;min-height:52px;user-select:none;-webkit-user-select:none;cursor:grab;touch-action:none}
+.arr-card.dragging{opacity:.92;border-color:var(--primary);box-shadow:0 8px 24px rgba(6,0,71,.7),0 0 20px rgba(119,217,112,.35);background:rgba(119,217,112,.12);cursor:grabbing;position:relative;z-index:20;transition:none}
+.arr-card.wrong{border-color:var(--magenta);animation:shake .4s}
+.arr-card.correct{border-color:var(--green);box-shadow:0 0 16px rgba(167,255,131,.25)}
+.arr-card .grip{color:var(--text-dim);font-size:1.1rem;letter-spacing:-2px;flex-shrink:0}
+.arr-card .card-text{flex:1;font-size:clamp(.85rem,3.5vw,1rem);line-height:1.35;pointer-events:none}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+
+.arrange-btns{display:flex;gap:12px;margin-top:12px;flex-shrink:0}
+.arrange-btns button{padding:12px 24px;border:none;border-radius:10px;font-family:var(--font-body);font-weight:700;font-size:.95rem;cursor:pointer;transition:all .2s}
+.btn-replay{background:var(--card);color:var(--primary);border:1px solid var(--card-border)}
+.btn-check{background:linear-gradient(135deg,var(--primary),var(--primary-deep));color:#060047}
+.btn-check:active{transform:scale(.95)}
+
+/* ─── Verse transition banner ─── */
+#verse-banner{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:rgba(6,0,71,.88);z-index:9}
+#verse-banner.active{display:flex}
+#verse-banner .vb-title{font-family:var(--font-display);font-size:1.6rem;color:var(--primary-bright);animation:countpulse .8s ease-out}
+#verse-banner .vb-sub{color:var(--text-dim);font-size:.9rem}
+
+/* ─── Word Rain (Tetris-style) ─── */
+#screen-wordrain{justify-content:flex-start;padding-top:12px}
+.wr-field{position:relative;flex:1;width:100%;max-width:500px;overflow:hidden;min-height:200px}
+.wr-guide{position:absolute;top:0;bottom:0;width:1px;background:linear-gradient(180deg,transparent,rgba(180,174,232,.12),transparent)}
+.wr-landline{position:absolute;left:0;right:0;bottom:0;height:2px;background:linear-gradient(90deg,transparent,var(--primary),var(--pink),transparent);box-shadow:0 0 12px rgba(119,217,112,.4)}
+.wr-tile{position:absolute;transform:translateX(-50%);padding:10px 14px;border-radius:12px;background:var(--card);border:1.5px solid var(--card-border);color:var(--text);font-family:var(--font-body);font-weight:600;font-size:clamp(.9rem,3.6vw,1.05rem);white-space:nowrap;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;box-shadow:0 4px 14px rgba(6,0,71,.55);z-index:2}
+.wr-tile:active{transform:translateX(-50%) scale(.93)}
+.wr-tile.cycled{animation:cyclepop .18s}
+@keyframes cyclepop{0%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.12)}100%{transform:translateX(-50%) scale(1)}}
+.wr-tile.land-hit{border-color:var(--green);color:var(--green);box-shadow:0 0 18px rgba(167,255,131,.5)}
+.wr-tile.land-miss{border-color:var(--magenta);color:var(--pink);box-shadow:0 0 18px rgba(233,0,100,.4)}
+.wr-assembly{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;padding:14px 8px;min-height:64px;width:100%;max-width:500px;flex-shrink:0}
+.wr-slot{padding:8px 12px;border-radius:10px;border:1.5px dashed var(--card-border);color:var(--text-dim);min-width:52px;text-align:center;font-size:clamp(.85rem,3.4vw,1rem);transition:all .25s}
+.wr-slot.hit{border-style:solid;border-color:var(--green);color:var(--green);background:rgba(167,255,131,.1);animation:fillpop .35s}
+.wr-slot.miss{border-style:solid;border-color:var(--magenta);color:var(--pink);background:rgba(233,0,100,.08);text-decoration:line-through}
+@keyframes fillpop{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+
+/* ─── Quick Pick ─── */
+#screen-quickpick{justify-content:flex-start;padding-top:16px}
+.qp-line-box{width:100%;max-width:500px;text-align:center;padding:14px 8px;min-height:76px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.qp-line-text{font-size:clamp(1.05rem,4.2vw,1.35rem);line-height:1.5;letter-spacing:.5px}
+.qp-line-text .gap{display:inline-block;min-width:64px;border-bottom:2px solid var(--pink);margin:0 4px;color:var(--pink);transition:all .3s}
+.qp-line-text .gap.filled{color:var(--green);border-color:var(--green);animation:fillpop .4s}
+.qp-line-text.dim{color:var(--text-dim)}
+.qp-line-timer-wrap{width:100%;max-width:500px;height:4px;background:rgba(254,255,222,.08);border-radius:2px;flex-shrink:0;overflow:hidden;margin-bottom:14px}
+.qp-line-timer{height:100%;background:linear-gradient(90deg,var(--pink),var(--magenta));border-radius:2px}
+#qp-options{flex:1;width:100%;max-width:500px;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:center;padding:8px 0}
+.qp-opt{padding:18px 10px;border:1.5px solid var(--card-border);border-radius:14px;background:var(--card);color:var(--text);font-family:var(--font-body);font-size:clamp(.95rem,3.8vw,1.15rem);font-weight:600;cursor:pointer;transition:all .15s;text-align:center;letter-spacing:.5px}
+.qp-opt:active{transform:scale(.95)}
+.qp-opt.hit{border-color:var(--green);background:rgba(167,255,131,.14);color:var(--green);box-shadow:0 0 18px rgba(167,255,131,.3)}
+.qp-opt.wrong{border-color:var(--magenta);background:rgba(233,0,100,.1);color:var(--pink);animation:shake .35s;pointer-events:none;opacity:.55}
+.qp-opt.disabled{pointer-events:none;opacity:.4}
+#qp-feedback{min-height:28px;font-family:var(--font-display);font-size:1rem;color:var(--primary-bright);flex-shrink:0;text-align:center}
+
+/* ─── Score Screen ─── */
+.score-screen{gap:16px}
+.score-screen h2{font-family:var(--font-display);font-size:1.4rem;color:var(--primary-bright)}
+.big-score{font-family:var(--font-display);font-size:3rem;color:var(--cream);text-shadow:0 0 24px rgba(119,217,112,.5)}
+.score-math{font-size:.9rem;color:var(--pink);letter-spacing:1px}
+.score-detail{color:var(--text-dim);font-size:.85rem;text-align:center;line-height:1.7}
+.score-screen .menu-btn{margin-top:12px}
+.stars{font-size:2.4rem;margin:12px 0;letter-spacing:8px;color:var(--primary-bright)}
+
+/* ─── Countdown overlay ─── */
+#countdown-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(6,0,71,.85);z-index:10}
+#countdown-overlay.active{display:flex}
+#countdown-num{font-family:var(--font-display);font-size:4rem;color:var(--primary);animation:countpulse .8s ease-out}
+@keyframes countpulse{0%{transform:scale(1.8);opacity:0}30%{opacity:1}100%{transform:scale(1);opacity:1}}
+
+/* ─── YouTube ─── */
+#yt-wrap{position:fixed;bottom:-300px;left:0;width:320px;height:180px;z-index:-1;opacity:0;pointer-events:none}
+
+.wr-result{display:inline-block;padding:4px 12px;border-radius:8px;font-size:.8rem;font-weight:700;margin:2px}
+.wr-result.perfect{background:rgba(167,255,131,.15);color:var(--green)}
+.wr-result.miss{background:rgba(233,0,100,.12);color:var(--pink)}
+</style>
+</head>
+<body>
+
+<!-- Lasers -->
+<div id="lasers">
+  <div class="laser" style="--r:18deg"></div>
+  <div class="laser" style="--r:14deg"></div>
+  <div class="laser" style="--r:22deg"></div>
+  <div class="laser" style="--r:10deg"></div>
+  <div class="laser" style="--r:15deg"></div>
+</div>
+
+<!-- YouTube (offscreen) -->
+<div id="yt-wrap"><div id="yt-player"></div></div>
+
+<!-- Countdown overlay -->
+<div id="countdown-overlay"><span id="countdown-num"></span></div>
+
+<!-- Verse transition banner -->
+<div id="verse-banner">
+  <div class="vb-title" id="vb-title">VERSE 2</div>
+  <div class="vb-sub" id="vb-sub">+4 points</div>
+</div>
+
+<!-- ═══ HOME ═══ -->
+<div id="screen-home" class="screen active">
+  <h1>LAULUPAJA</h1>
+  <div class="subtitle">Game Arcade</div>
+  <div class="song-badge">♫ Pieni Nokipoika</div>
+  <button class="menu-btn" onclick="startArrangeSong()"><span class="icon">🧩</span> Verse Arrange</button>
+  <button class="menu-btn" onclick="startQuickPick()"><span class="icon">⚡</span> Quick Pick</button>
+  <button class="menu-btn" onclick="startWordRain()"><span class="icon">🌧</span> Word Rain</button>
+</div>
+
+<!-- ═══ ARRANGE GAME ═══ -->
+<div id="screen-arrange" class="screen" style="justify-content:flex-start;padding-top:14px">
+  <div class="hud">
+    <div class="hud-item"><span class="hud-label">Points</span><span class="hud-val" id="arr-points">0</span></div>
+    <div class="hud-item"><span class="hud-label">Time</span><span class="hud-val" id="arr-time">0s</span></div>
+    <div class="hud-item"><span class="hud-label">Bonus</span><span class="hud-val" id="arr-bonus">0</span></div>
+  </div>
+  <div class="timer-bar-wrap"><div class="timer-bar" id="arr-timer-bar" style="width:100%"></div></div>
+  <div class="verse-label" id="arr-verse-label">VERSE 1 / 3</div>
+  <div id="arrange-cards"></div>
+  <div class="arrange-btns">
+    <button class="btn-replay" id="btn-replay" onclick="arrReplay()">🔊 Replay</button>
+    <button class="btn-check" id="btn-check" onclick="arrCheck()">✓ Check</button>
+  </div>
+</div>
+
+<!-- ═══ ARRANGE SCORE ═══ -->
+<div id="screen-arrange-score" class="screen score-screen">
+  <h2>Song Complete!</h2>
+  <div class="big-score" id="arr-final-score">0</div>
+  <div class="score-math" id="arr-score-math"></div>
+  <div class="score-detail" id="arr-score-detail"></div>
+  <button class="menu-btn" onclick="startArrangeSong()"><span class="icon">🔄</span> Play Again</button>
+  <button class="menu-btn" onclick="showScreen('screen-home')"><span class="icon">🏠</span> Home</button>
+</div>
+
+<!-- ═══ QUICK PICK GAME ═══ -->
+<div id="screen-quickpick" class="screen">
+  <div class="hud">
+    <div class="hud-item"><span class="hud-label">Points</span><span class="hud-val" id="qp-points">0</span></div>
+    <div class="hud-item"><span class="hud-label">Streak</span><span class="hud-val" id="qp-streak">0</span></div>
+    <div class="hud-item"><span class="hud-label">Best</span><span class="hud-val" id="qp-best">0</span></div>
+  </div>
+  <div class="qp-line-box"><div class="qp-line-text" id="qp-line"></div></div>
+  <div class="qp-line-timer-wrap"><div class="qp-line-timer" id="qp-line-timer" style="width:0%"></div></div>
+  <div id="qp-options"></div>
+  <div id="qp-feedback"></div>
+</div>
+
+<!-- ═══ QUICK PICK SCORE ═══ -->
+<div id="screen-qp-score" class="screen score-screen">
+  <h2>Song Complete!</h2>
+  <div class="big-score" id="qp-final-score">0</div>
+  <div class="score-math" id="qp-score-math"></div>
+  <div class="score-detail" id="qp-score-detail"></div>
+  <button class="menu-btn" onclick="startQuickPick()"><span class="icon">🔄</span> Play Again</button>
+  <button class="menu-btn" onclick="showScreen('screen-home')"><span class="icon">🏠</span> Home</button>
+</div>
+
+<!-- ═══ WORD RAIN GAME ═══ -->
+<div id="screen-wordrain" class="screen">
+  <div class="hud">
+    <div class="hud-item"><span class="hud-label">Points</span><span class="hud-val" id="wr-points">0</span></div>
+    <div class="hud-item"><span class="hud-label">Streak</span><span class="hud-val" id="wr-streak">0</span></div>
+    <div class="hud-item"><span class="hud-label">Best</span><span class="hud-val" id="wr-best">0</span></div>
+  </div>
+  <div class="wr-field" id="wr-field">
+    <div class="wr-guide" style="left:33.33%"></div>
+    <div class="wr-guide" style="left:66.66%"></div>
+    <div class="wr-landline"></div>
+  </div>
+  <div class="wr-assembly" id="wr-assembly"></div>
+</div>
+
+<!-- ═══ WORD RAIN SCORE ═══ -->
+<div id="screen-wr-score" class="screen score-screen">
+  <h2>Song Complete!</h2>
+  <div class="big-score" id="wr-final-score">0</div>
+  <div class="score-math" id="wr-score-math"></div>
+  <div class="score-detail" id="wr-score-detail"></div>
+  <button class="menu-btn" onclick="startWordRain()"><span class="icon">🔄</span> Play Again</button>
+  <button class="menu-btn" onclick="showScreen('screen-home')"><span class="icon">🏠</span> Home</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  SONG DATA
+// ═══════════════════════════════════════════════
+const SONG = {
+  title:"Pieni Nokipoika",
+  videoId:"v5ByPjx12Ng",
+  verses:[
+    {lines:[
+      {text:"pieni nokipoika vaan",start:7.80,end:12.42,verbs:[]},
+      {text:"uunin piippuun katoaa",start:12.42,end:16.48,verbs:[{surface:"katoaa",infinitive:"kadota"}]},
+      {text:"yhä ylös yrittää",start:16.48,end:20.55,verbs:[{surface:"yrittää",infinitive:"yrittää"}]},
+      {text:"katolle hän kiipeää",start:20.55,end:32.94,verbs:[{surface:"kiipeää",infinitive:"kiivetä"}]}
+    ]},
+    {lines:[
+      {text:"ympärilleen katselee",start:32.94,end:37.38,verbs:[{surface:"katselee",infinitive:"katsella"}]},
+      {text:"auringonkin arvelee",start:37.38,end:41.37,verbs:[{surface:"arvelee",infinitive:"arvella"}]},
+      {text:"voivan sieltä saavuttaa",start:41.37,end:45.80,verbs:[{surface:"voivan",infinitive:"voida"},{surface:"saavuttaa",infinitive:"saavuttaa"}]},
+      {text:"siksi huutaa hei hurraa",start:45.80,end:57.50,verbs:[{surface:"huutaa",infinitive:"huutaa"}]}
+    ]},
+    {lines:[
+      {text:"pikku nokipoika vaan",start:57.50,end:62.20,verbs:[]},
+      {text:"puhdas ompi muodoltaan",start:62.20,end:66.10,verbs:[{surface:"ompi",infinitive:"olla"}]},
+      {text:"kun hän pyhän tultua",start:66.10,end:70.20,verbs:[{surface:"tultua",infinitive:"tulla"}]},
+      {text:"pois saa olla piipusta",start:70.20,end:74.69,verbs:[{surface:"saa",infinitive:"saada"},{surface:"olla",infinitive:"olla"}]}
+    ]}
+  ]
+};
+
+// ═══════════════════════════════════════════════
+//  YOUTUBE PLAYER
+// ═══════════════════════════════════════════════
+let ytPlayer = null, ytReady = false;
+
+function loadYT(){
+  if(window.YT && window.YT.Player){initYT();return}
+  const tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+}
+window.onYouTubeIframeAPIReady = initYT;
+function initYT(){
+  ytPlayer = new YT.Player('yt-player',{
+    width:320,height:180,
+    videoId:SONG.videoId,
+    playerVars:{controls:0,disablekb:1,fs:0,modestbranding:1,rel:0,playsinline:1},
+    events:{onReady:()=>{ytReady=true}}
+  });
+}
+function ytSeek(t){if(ytReady) ytPlayer.seekTo(t,true)}
+function ytPlay(){if(ytReady) ytPlayer.playVideo()}
+function ytPause(){if(ytReady) ytPlayer.pauseVideo()}
+function ytTime(){return ytReady ? ytPlayer.getCurrentTime() : 0}
+
+// ═══════════════════════════════════════════════
+//  SCREEN MANAGEMENT
+// ═══════════════════════════════════════════════
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════
+//  COUNTDOWN HELPER
+// ═══════════════════════════════════════════════
+function doCountdown(cb){
+  const ov = document.getElementById('countdown-overlay');
+  const num = document.getElementById('countdown-num');
+  ov.classList.add('active');
+  let n = 3;
+  num.textContent = n;
+  const iv = setInterval(()=>{
+    n--;
+    if(n > 0){
+      num.textContent = n;
+      num.style.animation = 'none'; num.offsetHeight; num.style.animation = '';
+    } else {
+      clearInterval(iv);
+      ov.classList.remove('active');
+      cb();
+    }
+  },800);
+}
+
+// Verse banner: quick flash between verses
+function showVerseBanner(title, sub, cb){
+  const b = document.getElementById('verse-banner');
+  document.getElementById('vb-title').textContent = title;
+  document.getElementById('vb-sub').textContent = sub;
+  b.classList.add('active');
+  setTimeout(()=>{ b.classList.remove('active'); cb && cb(); }, 1400);
+}
+
+// ═══════════════════════════════════════════════
+//  VERSE ARRANGE — full song, drag & drop
+// ═══════════════════════════════════════════════
+let arrState = null, arrRAF = null;
+
+function shuffleLines(correctOrder){
+  const shuffled = [...correctOrder];
+  for(let i = shuffled.length-1; i > 0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [shuffled[i],shuffled[j]] = [shuffled[j],shuffled[i]];
+  }
+  if(shuffled.every((s,i)=>s===correctOrder[i])){
+    [shuffled[0],shuffled[1]] = [shuffled[1],shuffled[0]];
+  }
+  return shuffled;
+}
+
+function startArrangeSong(){
+  arrState = {
+    verseIdx: 0,
+    points: 0,          // total correct lines banked across verses
+    bonusSecs: 0,       // total remaining seconds banked across verses
+    done: false,
+    verse: null
+  };
+  showScreen('screen-arrange');
+  updateArrHud();
+  beginArrVerse(0, true);
+}
+
+function beginArrVerse(verseIdx, withCountdown){
+  const verse = SONG.verses[verseIdx];
+  const correctOrder = verse.lines.map(l=>l.text);
+
+  const verseStart = verse.lines[0].start;
+  const rawEnd = verse.lines[verse.lines.length-1].end;
+  // Cap trailing instrumental so it doesn't inflate the timer
+  const effectiveEnd = Math.min(rawEnd, verse.lines[verse.lines.length-1].start + 8);
+  const duration = effectiveEnd - verseStart;
+
+  arrState.verseIdx = verseIdx;
+  arrState.verse = verse;
+  arrState.correctOrder = correctOrder;
+  arrState.current = shuffleLines(correctOrder);
+  arrState.verseStart = verseStart;
+  arrState.duration = duration;
+  arrState.startedAt = null;
+  arrState.timeLeft = duration;
+  arrState.timerRunning = false;
+  arrState.verseDone = false;
+
+  document.getElementById('arr-verse-label').textContent = `VERSE ${verseIdx+1} / ${SONG.verses.length}`;
+  renderArrCards();
+
+  ytSeek(verseStart);
+  const go = ()=>{
+    ytPlay();
+    arrState.startedAt = performance.now();
+    arrState.timerRunning = true;
+    if(!arrRAF) arrTick();
+  };
+  if(withCountdown) doCountdown(go); else go();
+}
+
+function renderArrCards(){
+  const c = document.getElementById('arrange-cards');
+  c.innerHTML = '';
+  arrState.current.forEach((text,i)=>{
+    const card = document.createElement('div');
+    card.className = 'arr-card';
+    card.dataset.text = text;
+    card.innerHTML = `<span class="grip">⠿</span><span class="card-text">${text}</span>`;
+    attachDrag(card);
+    c.appendChild(card);
+  });
+}
+
+// ── Drag & drop (document-level pointer events; survives DOM reordering,
+//    which silently kills setPointerCapture in Chrome) ──
+let dragCard = null, dragPointerId = null;
+
+function attachDrag(card){
+  card.addEventListener('pointerdown', e=>{
+    if(!arrState || arrState.verseDone || arrState.done) return;
+    if(dragCard) return; // one drag at a time
+    e.preventDefault();
+    dragCard = card;
+    dragPointerId = e.pointerId;
+    card.classList.add('dragging');
+    // Clear stale correctness marks as soon as a new drag starts
+    document.querySelectorAll('#arrange-cards .arr-card').forEach(el=>el.classList.remove('wrong','correct'));
+  });
+}
+
+function dragMove(e){
+  if(!dragCard || e.pointerId !== dragPointerId) return;
+  e.preventDefault();
+  const container = document.getElementById('arrange-cards');
+  const y = e.clientY;
+  const siblings = [...container.querySelectorAll('.arr-card')].filter(s=>s!==dragCard);
+  let placed = false;
+  for(const sib of siblings){
+    const r = sib.getBoundingClientRect();
+    if(y < r.top + r.height/2){
+      if(sib.previousElementSibling !== dragCard){
+        container.insertBefore(dragCard, sib);
+      }
+      placed = true;
+      break;
+    }
+  }
+  if(!placed && container.lastElementChild !== dragCard){
+    container.appendChild(dragCard);
+  }
+}
+
+function dragEnd(e){
+  if(!dragCard || e.pointerId !== dragPointerId) return;
+  dragCard.classList.remove('dragging');
+  dragCard = null;
+  dragPointerId = null;
+  // Sync array from DOM order
+  const container = document.getElementById('arrange-cards');
+  if(arrState){
+    arrState.current = [...container.querySelectorAll('.arr-card')].map(el=>el.dataset.text);
+  }
+}
+
+document.addEventListener('pointermove', dragMove, {passive:false});
+document.addEventListener('pointerup', dragEnd);
+document.addEventListener('pointercancel', dragEnd);
+
+function arrTick(){
+  arrRAF = requestAnimationFrame(arrTick);
+  if(!arrState || arrState.done) return;
+
+  if(arrState.timerRunning){
+    const elapsed = (performance.now() - arrState.startedAt) / 1000;
+    arrState.timeLeft = Math.max(0, arrState.duration - elapsed);
+
+    const pct = (arrState.timeLeft / arrState.duration) * 100;
+    const bar = document.getElementById('arr-timer-bar');
+    bar.style.width = pct + '%';
+    bar.classList.toggle('danger', pct < 25);
+    document.getElementById('arr-time').textContent = Math.ceil(arrState.timeLeft) + 's';
+
+    if(arrState.timeLeft <= 0){
+      arrState.timerRunning = false;
+      ytPause();
+      // Player can still finish arranging — bonus for this verse is just 0
+    }
+  }
+}
+
+function arrReplay(){
+  if(!arrState || arrState.verseDone || arrState.done) return;
+  // Replay re-seeks the audio; the timer keeps draining (speed bonus stays honest)
+  ytSeek(arrState.verseStart);
+  ytPlay();
+}
+
+function arrCheck(){
+  if(!arrState || arrState.verseDone || arrState.done) return;
+  const cards = document.querySelectorAll('#arrange-cards .arr-card');
+  let allCorrect = true;
+
+  arrState.current.forEach((text,i) => {
+    if(text === arrState.correctOrder[i]){
+      cards[i].classList.add('correct');
+      cards[i].classList.remove('wrong');
+    } else {
+      cards[i].classList.add('wrong');
+      cards[i].classList.remove('correct');
+      allCorrect = false;
+    }
+  });
+
+  if(allCorrect){
+    arrState.verseDone = true;
+    arrState.timerRunning = false;
+    ytPause();
+
+    const linesEarned = arrState.correctOrder.length;
+    const secsEarned = Math.ceil(arrState.timeLeft);
+    arrState.points += linesEarned;
+    arrState.bonusSecs += secsEarned;
+    updateArrHud();
+
+    const nextIdx = arrState.verseIdx + 1;
+    setTimeout(()=>{
+      if(nextIdx < SONG.verses.length){
+        showVerseBanner(`VERSE ${nextIdx+1}`, `+${linesEarned} points · +${secsEarned}s bonus`, ()=>{
+          beginArrVerse(nextIdx, false);
+        });
+      } else {
+        showArrScore();
+      }
+    }, 1000);
+  }
+}
+
+function showArrScore(){
+  arrState.done = true;
+  cancelAnimationFrame(arrRAF);
+  arrRAF = null;
+
+  const points = arrState.points;
+  const multiplier = Math.max(1, arrState.bonusSecs);
+  const final = points * multiplier;
+
+  document.getElementById('arr-final-score').textContent = final;
+  document.getElementById('arr-score-math').textContent =
+    `${points} lines × ${multiplier}s bonus = ${final}`;
+  document.getElementById('arr-score-detail').innerHTML =
+    `${SONG.verses.length} verses arranged<br>` +
+    `${points} lines correct · ${arrState.bonusSecs}s total time remaining`;
+  showScreen('screen-arrange-score');
+}
+
+function updateArrHud(){
+  document.getElementById('arr-points').textContent = arrState.points;
+  document.getElementById('arr-bonus').textContent = arrState.bonusSecs + 's';
+}
+
+// ═══════════════════════════════════════════════
+//  QUICK PICK — 6 options, whole song, pick fast
+// ═══════════════════════════════════════════════
+let qpState = null, qpRAF = null;
+
+const SKIP_WORDS = new Set(['ja','on','ei','se','ne','me','te','he','hän','kun','tai',
+  'jos','nyt','jo','hei','yhä','voi','pois','vaan','niin','mutta','siis','siksi','yli',
+  'ali','kin','kuin','myös','vai','tuo','tää']);
+
+function qpPickGap(line){
+  const words = line.text.split(/\s+/);
+  const candidates = [];
+  words.forEach((w,i)=>{
+    const isVerb = line.verbs?.some(v=>v.surface===w);
+    if(isVerb || (w.length > 3 && !SKIP_WORDS.has(w))) candidates.push({word:w, idx:i, isVerb});
+  });
+  if(candidates.length === 0){
+    const longest = words.reduce((a,b)=>a.length>=b.length?a:b);
+    return {word:longest, idx:words.indexOf(longest)};
+  }
+  const verbs = candidates.filter(c=>c.isVerb);
+  if(verbs.length) return verbs[Math.floor(Math.random()*verbs.length)];
+  return candidates[Math.floor(Math.random()*candidates.length)];
+}
+
+function buildQpRounds(){
+  // Every line across the whole song = one round
+  const allLines = [];
+  SONG.verses.forEach((v,vi)=> v.lines.forEach(l=> allLines.push({...l, verseIdx:vi})));
+
+  // Pool of content words for decoys
+  const pool = [];
+  allLines.forEach(l=>{
+    l.text.split(/\s+/).forEach(w=>{
+      if(w.length > 3 && !SKIP_WORDS.has(w) && !pool.includes(w)) pool.push(w);
+    });
+  });
+
+  return allLines.map(line=>{
+    const gap = qpPickGap(line);
+    let decoys = pool.filter(w=>w!==gap.word).sort(()=>Math.random()-.5).slice(0,5);
+    const options = [gap.word, ...decoys].sort(()=>Math.random()-.5);
+    return {line, gap, options, resolved:false, hit:false};
+  });
+}
+
+function startQuickPick(){
+  qpState = {
+    rounds: buildQpRounds(),
+    roundIdx: -1,
+    points: 0,
+    streak: 0,
+    bestStreak: 0,
+    misses: 0,
+    done: false
+  };
+  showScreen('screen-quickpick');
+  document.getElementById('qp-points').textContent = '0';
+  document.getElementById('qp-streak').textContent = '0';
+  document.getElementById('qp-best').textContent = '0';
+  document.getElementById('qp-line').innerHTML = '<span class="dim" style="color:var(--text-dim)">Get ready…</span>';
+  document.getElementById('qp-options').innerHTML = '';
+  document.getElementById('qp-feedback').textContent = '';
+
+  ytSeek(Math.max(0, SONG.verses[0].lines[0].start - 2));
+  doCountdown(()=>{
+    ytPlay();
+    qpRAF = requestAnimationFrame(qpTick);
+  });
+}
+
+function qpTick(){
+  if(!qpState || qpState.done) return;
+  qpRAF = requestAnimationFrame(qpTick);
+
+  const t = ytTime();
+  const rounds = qpState.rounds;
+
+  // Which round (line) is playing now?
+  let activeIdx = -1;
+  for(let i=0;i<rounds.length;i++){
+    if(t >= rounds[i].line.start - 0.3 && t < rounds[i].line.end){
+      activeIdx = i;
+      break;
+    }
+  }
+
+  if(activeIdx !== qpState.roundIdx){
+    // Leaving a round unresolved = miss
+    if(qpState.roundIdx >= 0){
+      const prev = rounds[qpState.roundIdx];
+      if(!prev.resolved){
+        prev.resolved = true;
+        qpState.misses++;
+        qpState.streak = 0;
+        updateQpHud();
+      }
+    }
+    if(activeIdx >= 0){
+      qpState.roundIdx = activeIdx;
+      qpShowRound(rounds[activeIdx]);
+    }
+  }
+
+  // Per-line timer bar
+  if(activeIdx >= 0){
+    const line = rounds[activeIdx].line;
+    const lineDur = line.end - line.start;
+    const elapsed = Math.max(0, t - line.start);
+    const pct = Math.min(100, (elapsed / lineDur) * 100);
+    document.getElementById('qp-line-timer').style.width = (100 - pct) + '%';
+  }
+
+  // Song end?
+  const lastLine = rounds[rounds.length-1].line;
+  if(t > lastLine.end + 1){
+    // Resolve last round if pending
+    const last = rounds[rounds.length-1];
+    if(!last.resolved){
+      last.resolved = true;
+      qpState.misses++;
+    }
+    qpFinish();
+  }
+}
+
+function qpShowRound(round){
+  const words = round.line.text.split(/\s+/);
+  const html = words.map((w,i)=> i === round.gap.idx ? `<span class="gap">___</span>` : w).join(' ');
+  document.getElementById('qp-line').innerHTML = html;
+  document.getElementById('qp-feedback').textContent = '';
+
+  const c = document.getElementById('qp-options');
+  c.innerHTML = '';
+  round.options.forEach(w=>{
+    const b = document.createElement('button');
+    b.className = 'qp-opt';
+    b.textContent = w;
+    b.onclick = ()=> qpPick(round, w, b);
+    c.appendChild(b);
+  });
+}
+
+function qpPick(round, word, btn){
+  if(round.resolved || !qpState || qpState.done) return;
+
+  if(word === round.gap.word){
+    round.resolved = true;
+    round.hit = true;
+    qpState.points++;
+    qpState.streak++;
+    qpState.bestStreak = Math.max(qpState.bestStreak, qpState.streak);
+
+    btn.classList.add('hit');
+    // Fill the gap in the line
+    const words = round.line.text.split(/\s+/);
+    const html = words.map((w,i)=> i === round.gap.idx ? `<span class="gap filled">${w}</span>` : w).join(' ');
+    document.getElementById('qp-line').innerHTML = html;
+    // Disable remaining options
+    document.querySelectorAll('#qp-options .qp-opt').forEach(b=>{ if(b!==btn) b.classList.add('disabled'); });
+
+    if(qpState.streak >= 3) document.getElementById('qp-feedback').textContent = `${qpState.streak} STREAK!`;
+    updateQpHud();
+  } else {
+    btn.classList.add('wrong');
+    qpState.streak = 0;
+    updateQpHud();
+    // Round stays open — player can still find the right word before the line ends
+  }
+}
+
+function updateQpHud(){
+  document.getElementById('qp-points').textContent = qpState.points;
+  document.getElementById('qp-streak').textContent = qpState.streak > 2 ? qpState.streak + '🔥' : qpState.streak;
+  document.getElementById('qp-best').textContent = qpState.bestStreak;
+}
+
+function qpFinish(){
+  qpState.done = true;
+  ytPause();
+  cancelAnimationFrame(qpRAF);
+  qpRAF = null;
+
+  const points = qpState.points;
+  const bonus = Math.max(1, qpState.bestStreak);
+  const final = points * bonus;
+  const total = qpState.rounds.length;
+
+  document.getElementById('qp-final-score').textContent = final;
+  document.getElementById('qp-score-math').textContent =
+    `${points} points × ${bonus} best streak = ${final}`;
+  document.getElementById('qp-score-detail').innerHTML =
+    `${points} / ${total} words caught<br>` +
+    `Best streak: ${qpState.bestStreak} · Missed: ${qpState.misses}`;
+
+  setTimeout(()=> showScreen('screen-qp-score'), 600);
+}
+
+// ═══════════════════════════════════════════════
+//  WORD RAIN — Tetris-style falling words
+//  All words of each line fall in 3 columns, staggered,
+//  synced so each lands as it is sung. Tap a tile to
+//  cycle its word. Whatever shows at landing is judged.
+// ═══════════════════════════════════════════════
+let wrState = null, wrRAF = null;
+const WR_FALL_TIME = 3.0;   // seconds a tile is airborne
+const WR_CANDIDATES = 3;    // words per cycle (1 correct + 2 decoys)
+const WR_TILE_H = 42;       // approx tile height for landing math
+
+function buildWordRainPlan(){
+  const allLines = [];
+  SONG.verses.forEach(v => v.lines.forEach(l => allLines.push(l)));
+
+  // Decoy pool: every unique word in the song
+  const pool = [];
+  allLines.forEach(l => l.text.split(/\s+/).forEach(w => {
+    if(!pool.includes(w)) pool.push(w);
+  }));
+
+  return allLines.map((line, li) => {
+    const words = line.text.split(/\s+/);
+    // Cap trailing instrumental so land times track the sung portion
+    const effEnd = Math.min(line.end, line.start + 6);
+    const dur = effEnd - line.start;
+    const n = words.length;
+
+    const tiles = words.map((w, wi) => {
+      // Land times evenly staggered across the line so words arrive
+      // one-by-one in reading order (first word lands early, last near end)
+      const landT = line.start + ((wi + 1) / (n + 1)) * dur;
+      let decoys = pool.filter(x => x !== w).sort(() => Math.random() - .5).slice(0, WR_CANDIDATES - 1);
+      const candidates = [w, ...decoys].sort(() => Math.random() - .5);
+      return {
+        word: w, wordIdx: wi, lineIdx: li,
+        col: wi % 3,   // sequential: 0,1,2,0,1,2…
+        landT, spawnT: landT - WR_FALL_TIME,
+        candidates,
+        cycleIdx: Math.floor(Math.random() * candidates.length),
+        spawned: false, landed: false, el: null
+      };
+    });
+    return { line, words, tiles };
+  });
+}
+
+function startWordRain(){
+  // Clear any old tiles
+  document.querySelectorAll('#wr-field .wr-tile').forEach(el => el.remove());
+
+  wrState = {
+    plan: buildWordRainPlan(),
+    points: 0,
+    streak: 0,
+    bestStreak: 0,
+    misses: 0,
+    totalWords: 0,
+    currentLineIdx: -1,
+    done: false
+  };
+  wrState.totalWords = wrState.plan.reduce((n, l) => n + l.tiles.length, 0);
+
+  showScreen('screen-wordrain');
+  document.getElementById('wr-points').textContent = '0';
+  document.getElementById('wr-streak').textContent = '0';
+  document.getElementById('wr-best').textContent = '0';
+  document.getElementById('wr-assembly').innerHTML =
+    '<span style="color:var(--text-dim);font-size:.85rem">Get ready…</span>';
+
+  const firstLand = wrState.plan[0].tiles[0].landT;
+  ytSeek(Math.max(0, firstLand - WR_FALL_TIME - 1));
+  doCountdown(() => {
+    ytPlay();
+    wrRAF = requestAnimationFrame(wrTick);
+  });
+}
+
+function wrTick(){
+  if(!wrState || wrState.done) return;
+  wrRAF = requestAnimationFrame(wrTick);
+
+  const t = ytTime();
+  const field = document.getElementById('wr-field');
+  const fieldH = field.clientHeight;
+
+  // Determine which line is active — the last line whose start we've reached.
+  // Scanning forward ensures contiguous boundaries (line N end = line N+1 start)
+  // always advance correctly.
+  let lineIdx = -1;
+  for(let i = 0; i < wrState.plan.length; i++){
+    if(t >= wrState.plan[i].line.start) lineIdx = i;
+  }
+  // Look-ahead: activate first line early so its tiles can start falling
+  if(lineIdx === -1 && wrState.plan.length > 0 &&
+     t >= wrState.plan[0].tiles[0].spawnT - 0.5){
+    lineIdx = 0;
+  }
+
+  // Line transition: force-land anything still airborne from previous line
+  if(lineIdx !== wrState.currentLineIdx && lineIdx >= 0){
+    if(wrState.currentLineIdx >= 0){
+      const prevLine = wrState.plan[wrState.currentLineIdx];
+      prevLine.tiles.forEach(tile => {
+        if(tile.spawned && !tile.landed) wrLandTile(tile);
+      });
+    }
+    wrState.currentLineIdx = lineIdx;
+    wrRenderAssembly(lineIdx);
+  }
+
+  // Only spawn / move / land tiles for the CURRENT line
+  if(wrState.currentLineIdx >= 0){
+    const lineObj = wrState.plan[wrState.currentLineIdx];
+    lineObj.tiles.forEach(tile => {
+      if(tile.landed) return;
+
+      if(!tile.spawned && t >= tile.spawnT && t < tile.landT + 0.5){
+        wrSpawnTile(tile, field);
+      }
+      if(tile.spawned && !tile.landed){
+        const prog = (t - tile.spawnT) / (tile.landT - tile.spawnT);
+        if(prog >= 1){
+          wrLandTile(tile);
+        } else if(prog >= 0){
+          tile.el.style.top = (prog * (fieldH - WR_TILE_H)) + 'px';
+        }
+      }
+    });
+  }
+
+  // Song end?
+  const lastLine = wrState.plan[wrState.plan.length - 1].line;
+  if(t > lastLine.end + 1){
+    // Force-land anything remaining
+    wrState.plan[wrState.plan.length - 1].tiles.forEach(tile => {
+      if(tile.spawned && !tile.landed) wrLandTile(tile);
+    });
+    wrFinish();
+  }
+}
+
+function wrSpawnTile(tile, field){
+  tile.spawned = true;
+  const el = document.createElement('button');
+  el.className = 'wr-tile';
+  el.textContent = tile.candidates[tile.cycleIdx];
+  el.style.left = ((tile.col + 0.5) / 3 * 100) + '%';
+  el.style.top = '-50px';
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    wrCycleTile(tile);
+  });
+  field.appendChild(el);
+  tile.el = el;
+}
+
+function wrCycleTile(tile){
+  if(tile.landed || !wrState || wrState.done) return;
+  tile.cycleIdx = (tile.cycleIdx + 1) % tile.candidates.length;
+  tile.el.textContent = tile.candidates[tile.cycleIdx];
+  tile.el.classList.remove('cycled');
+  tile.el.offsetHeight; // restart animation
+  tile.el.classList.add('cycled');
+}
+
+function wrLandTile(tile){
+  tile.landed = true;
+  const shown = tile.candidates[tile.cycleIdx];
+  const hit = shown === tile.word;
+
+  if(hit){
+    wrState.points++;
+    wrState.streak++;
+    wrState.bestStreak = Math.max(wrState.bestStreak, wrState.streak);
+    tile.el.classList.add('land-hit');
+  } else {
+    wrState.misses++;
+    wrState.streak = 0;
+    tile.el.classList.add('land-miss');
+  }
+  updateWrHud();
+
+  // Fill the assembly slot (only if this line's row is showing)
+  if(tile.lineIdx === wrState.currentLineIdx){
+    const slot = document.querySelector(`#wr-assembly .wr-slot[data-widx="${tile.wordIdx}"]`);
+    if(slot){
+      slot.textContent = shown;
+      slot.classList.add(hit ? 'hit' : 'miss');
+    }
+  }
+
+  // Fade the tile out shortly after landing
+  const el = tile.el;
+  setTimeout(() => {
+    if(el && el.parentNode) el.remove();
+  }, 450);
+  tile.el = null;
+}
+
+function wrRenderAssembly(lineIdx){
+  const lineObj = wrState.plan[lineIdx];
+  const c = document.getElementById('wr-assembly');
+  c.innerHTML = '';
+  lineObj.words.forEach((w, wi) => {
+    const s = document.createElement('span');
+    s.className = 'wr-slot';
+    s.dataset.widx = wi;
+    // A tile may have landed a hair before the row swapped — backfill it
+    const tile = lineObj.tiles[wi];
+    if(tile.landed){
+      const shown = tile.candidates[tile.cycleIdx];
+      s.textContent = shown;
+      s.classList.add(shown === tile.word ? 'hit' : 'miss');
+    } else {
+      s.textContent = '···';
+    }
+    c.appendChild(s);
+  });
+}
+
+function updateWrHud(){
+  document.getElementById('wr-points').textContent = wrState.points;
+  document.getElementById('wr-streak').textContent = wrState.streak > 2 ? wrState.streak + '🔥' : wrState.streak;
+  document.getElementById('wr-best').textContent = wrState.bestStreak;
+}
+
+function wrFinish(){
+  wrState.done = true;
+  ytPause();
+  cancelAnimationFrame(wrRAF);
+  wrRAF = null;
+  document.querySelectorAll('#wr-field .wr-tile').forEach(el => el.remove());
+
+  const points = wrState.points;
+  const bonus = Math.max(1, wrState.bestStreak);
+  const final = points * bonus;
+
+  document.getElementById('wr-final-score').textContent = final;
+  document.getElementById('wr-score-math').textContent =
+    `${points} points × ${bonus} best streak = ${final}`;
+  document.getElementById('wr-score-detail').innerHTML =
+    `<span class="wr-result perfect">${points} / ${wrState.totalWords} words landed right</span> ` +
+    `<span class="wr-result miss">${wrState.misses} missed</span><br>` +
+    `Best streak: ${wrState.bestStreak}`;
+
+  setTimeout(() => showScreen('screen-wr-score'), 600);
+}
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+loadYT();
+</script>
+</body>
+</html>
